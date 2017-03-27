@@ -143,7 +143,7 @@ class SettingsMenu(SimpleScreen):
                 (0, 0, 0, popScreen))
         helpMenu.info = ("Raspberry Pi document camera\n" +
                 "Source code: licensed under GNU GPL-3.0\n" +
-                "  https://github.com/heinic/raspi-doccam-software\n")
+                "https://github.com/heinic/\n  raspi-doccam-software\n")
         showScreen(helpMenu)
 
 class NetworkSettingsMenu(SimpleScreen):
@@ -198,8 +198,8 @@ class ImageSettingsMenu(SimpleScreen):
     def changePrev(self):
         dialog = DialogScreen("Preview", ("Disable", "Enable", "", "Back"),
                 self.onChangePrev)
-        dialog.info = "Choose whether a preview should\n" +
-                "be available on the HDMI port.\n"
+        dialog.info = ("Choose whether a preview should\n" +
+                "be available on the HDMI port.\n")
         showScreen(dialog)
 
     def onChangePrev(self, num):

@@ -24,8 +24,8 @@ def setCamBounds(res, zoom):
         newres = (newres[1], newres[0])
 
     if(cam.resolution != newres):
-        print("Updating resolution from " + str(cam.resolution) + " to " + str(newres) +
-            ". Full size: " + str(res))
+        print("Updating resolution from " + str(cam.resolution) + " to " +
+                str(newres) + ". Full size: " + str(res))
         cam.resolution = newres
 
 def ipcListen():
