@@ -19,3 +19,5 @@ A major advantage of this document camera is it only requiring a power cable.
 All the other connections are optional and not required for effective use. The
 power can also be supplied from a USB power bank. This means the camera is
 completely portable.
+
+Building instructions are available [here](setup/hardware.md).
