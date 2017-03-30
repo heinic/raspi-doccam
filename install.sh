@@ -69,3 +69,8 @@ sudo chmod 555 /usr/lib/cgi-bin/*
 
 sudo chown www-data /var/www/html/* /usr/lib/cgi-bin/*
 sudo chgrp www-data /var/www/html/* /usr/lib/cgi-bin/*
+
+
+# force sudo to be used with a password
+sudo mv /etc/sudoers.d/010_pi-nopasswd /etc/sudoers.d/010_pi-nopasswd~
+echo "You can no longer use sudo without a password; to revert this change remove the trailing tilde from the file name /etc/sudoers.d/010_pi-nopasswd~"
