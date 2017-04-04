@@ -281,8 +281,8 @@ def saveConfig():
     print("Saving Config")
     # Hostapd:
 
+    global wifiSsid, wifiPass, wifiChanged
     if wifiChanged:
-        global wifiSsid, wifiPass, wifiChanged
         print("Saving hostapd config")
 
         wifilines = None
