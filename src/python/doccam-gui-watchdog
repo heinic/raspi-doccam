@@ -1,0 +1,65 @@
+#!/usr/bin/env python
+# coding=UTF-8
+
+# Raspberry Pi document camera
+# Copyright (C) 2017  Nico Heitmann
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+import sys, os, time
+import subprocess, threading
+
+
+def start_gui():
+    """Starts the camera gui"""
+    retc = subprocess.call(["/usr/local/bin/doccam-gui"])
+
+def start_cli():
+    """Starts a command line. However the user has to interact with it before it
+    times out. This ensures the user is never locked out of the GUI. The user
+    also has to log in to access the command line"""
+    subprocess.call(["lxterm", "-e", "doccam-gui-watchdog", "secterm"])
+
+
+def start_secure_terminal():
+    """Wrapper for bash to meet the requirements of start_cli()"""
+    print("Press enter to obtain a shell...")
+
+    has_waited = True
+    def fcancel():
+        time.sleep(3)
+        if has_waited: os._exit(0)
+    qthread = threading.Thread(target = fcancel)
+    qthread.start()
+
+    raw_input()
+    has_waited = False
+
+    for i in range(3):
+        retc = subprocess.call(["su", "pi"])
+        if retc != 1: sys.exit(0)
+
+    time.sleep(1)
+    sys.exit(0)
+
+if len(sys.argv) == 1:
+    while True:
+        start_gui()
+        start_cli()
+        
+if len(sys.argv) == 2:
+    if sys.argv[1] == "secterm": start_secure_terminal()
+
+print("Usage: " + sys.argv[0] + " [secterm]")

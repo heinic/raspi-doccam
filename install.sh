@@ -58,6 +58,19 @@ make
 make install
 EOF
 
+# doccam source
+sudo cp src/html/* /var/www/html/
+sudo chmod 444 /var/www/html/*
+
+sudo cp src/cgi/* /usr/lib/cgi-bin/
+sudo chmod 555 /usr/lib/cgi-bin/*
+
+sudo chown www-data /var/www/html/* /usr/lib/cgi-bin/*
+sudo chgrp www-data /var/www/html/* /usr/lib/cgi-bin/*
+
+sudo cp src/python/* /usr/local/bin/
+sudo chmod 755 /usr/local/bin/doccam-*
+
 # config
 sudo ln -s /etc/apache2/mods-available/cgi.load /etc/apache2/mods-enabled/
 
@@ -87,18 +100,11 @@ sudo update-rc.d hostapd defaults
 sudo update-rc.d hostapd enable
 sudo update-rc.d dnsmasq enable
 
-# doccam source
-sudo cp src/html/* /var/www/html/
-sudo chmod 444 /var/www/html/*
-
-sudo cp src/cgi/* /usr/lib/cgi-bin/
-sudo chmod 555 /usr/lib/cgi-bin/*
-
-sudo chown www-data /var/www/html/* /usr/lib/cgi-bin/*
-sudo chgrp www-data /var/www/html/* /usr/lib/cgi-bin/*
-
-sudo cp src/python/* /usr/local/bin/
-sudo chmod 755 /usr/local/bin/doccam-*
+# autostart the gui watchdog
+cat > /home/pi/.xsession << EOF
+#!/bin/bash
+doccam-gui-watchdog
+EOF
 
 # force sudo to be used with a password
 sudo mv /etc/sudoers.d/010_pi-nopasswd /etc/sudoers.d/010_pi-nopasswd~
