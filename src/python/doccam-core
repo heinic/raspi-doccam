@@ -119,10 +119,10 @@ def ipcHandle(conn):
                                     float(data[2][4]) + float(data[2][2])]
 
                             # Capture to a file
-                            cam.capture("lastpic.png")
+                            cam.capture("/tmp/doccam/pic.png")
 
                             # Load captured image into a new PIL image object
-                            img = Image.open("lastpic.png")
+                            img = Image.open("/tmp/doccam/pic.png")
                             w, h = img.size
 
                             # Crop the image and convert the relative

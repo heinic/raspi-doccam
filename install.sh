@@ -97,6 +97,8 @@ sudo chmod 555 /usr/lib/cgi-bin/*
 sudo chown www-data /var/www/html/* /usr/lib/cgi-bin/*
 sudo chgrp www-data /var/www/html/* /usr/lib/cgi-bin/*
 
+sudo cp src/python/* /usr/local/bin/
+sudo chmod 755 /usr/local/bin/doccam-*
 
 # force sudo to be used with a password
 sudo mv /etc/sudoers.d/010_pi-nopasswd /etc/sudoers.d/010_pi-nopasswd~
