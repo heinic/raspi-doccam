@@ -284,6 +284,7 @@ root = Tk()
 root.title("Raspberry Pi document camera")
 root.geometry("320x240")
 root.attributes("-fullscreen", True)
+root.config(cursor="arrow")
 
 global backgroundfr
 
