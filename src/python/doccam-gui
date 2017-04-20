@@ -160,7 +160,7 @@ class SettingsMenu(SimpleScreen):
                 (0, 0, 0, popScreen))
         helpMenu.info = ("Raspberry Pi document camera\n" +
                 "Source code: licensed under GNU GPL-3.0\n" +
-                "https://github.com/heinic/\n  raspi-doccam-software\n")
+                "https://github.com/heinic/raspi-doccam\n")
         showScreen(helpMenu)
 
 class NetworkSettingsMenu(SimpleScreen):
