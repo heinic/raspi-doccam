@@ -71,6 +71,10 @@ echo -e "n\nn\n" | sudo adafruit-pitft-helper -t 22
 
 sudo chmod 644 /etc/network/interfaces /etc/hostapd/hostapd.conf /etc/dnsmasq.d/dnsmasq-doccam.conf
 
+# disable screen blanking
+# from https://raspberrypi.stackexchange.com/a/2103
+echo -e "\n[SeatDefaults]\nxserver-command=X -s 0 -dpms" >> /etc/lightdm/lightdm.conf
+
 # enable daemons
 sudo update-rc.d hostapd defaults
 sudo update-rc.d hostapd enable
