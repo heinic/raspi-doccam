@@ -71,6 +71,9 @@ sudo chgrp www-data /var/www/html/* /usr/lib/cgi-bin/*
 sudo cp src/python/* /usr/local/bin/
 sudo chmod 755 /usr/local/bin/doccam-*
 
+sudo cp src/sh/doccam-core /etc/init.d
+sudo chmod 755 /etc/init.d/doccam-core
+
 # config
 sudo ln -s /etc/apache2/mods-available/cgi.load /etc/apache2/mods-enabled/
 
@@ -99,6 +102,7 @@ EOF
 sudo update-rc.d hostapd defaults
 sudo update-rc.d hostapd enable
 sudo update-rc.d dnsmasq enable
+sudo update-rc.d doccam-core enable
 
 # autostart the gui watchdog
 cat > /home/pi/.xsession << EOF

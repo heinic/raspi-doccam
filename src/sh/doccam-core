@@ -1,0 +1,46 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          doccam-core-service
+# Required-Start:
+# Required-Stop:
+# Default-Start:     3 4 5
+# Default-Stop:      0 6
+# Short-Description: central service of the document camera
+# Description:       Provides a centalized way to access the raspberry pi camera and other system resources
+### END INIT INFO
+
+
+start() {
+  if [ -f /var/run/doccam-core.pid ] && kill -0 $(cat /var/run/doccam-core.pid); then
+    echo "Service already running" >&2
+    return 1
+  fi
+  echo "Starting service..." >&2
+  su -c "/usr/local/bin/doccam-core &> /var/log/doccam & echo \$!" > /var/run/doccam-core.pid
+  echo "Service started!" >&2
+}
+
+stop() {
+  if [ ! -f /var/run/doccam-core.pid ] || ! kill -0 $(cat /var/run/doccam-core.pid); then
+    echo "Service not running" >&2
+    return 1
+  fi
+  echo "Stopping service..." >&2
+  kill -15 $(cat /var/run/doccam-core.pid) && rm -f /var/run/doccam-core.pid
+  echo "Service stopped!" >&2
+}
+
+case "$1" in
+  start)
+    start
+    ;;
+  stop)
+    stop
+    ;;
+  restart)
+    stop
+    start
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart}"
+esac

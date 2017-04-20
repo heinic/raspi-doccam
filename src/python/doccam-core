@@ -31,7 +31,7 @@ def setCamBounds(res, zoom):
     global cam, rotateVal
 
     if(cam.zoom != zoom):
-        print("Updating zoom from " + str(cam.zoom) + " to " + str(zoom) + ".")
+        sys.stdout.write("Updating zoom from " + str(cam.zoom) + " to " + str(zoom) + ".")
         cam.zoom = zoom
 
     # Chooses the correct resolution for the cropped area
@@ -41,7 +41,7 @@ def setCamBounds(res, zoom):
         newres = (newres[1], newres[0])
 
     if(cam.resolution != newres):
-        print("Updating resolution from " + str(cam.resolution) + " to " +
+        sys.stdout.write("Updating resolution from " + str(cam.resolution) + " to " +
                 str(newres) + ". Full size: " + str(res))
         cam.resolution = newres
 
@@ -56,8 +56,6 @@ def ipcListen():
         sockServer.listen(1)
         # Accept the next connection
         conn = sockServer.accept()
-
-        print("IPC: {!s}".format(conn[1]))
 
         threadHandle = threading.Thread(target = ipcHandle, args = {conn[0]})
         threadHandle.daemon = True
@@ -75,7 +73,7 @@ def ipcHandle(conn):
             strdat = conn.recv(4094)
             if not strdat: break
             data = json.loads(strdat) # load json to an array
-            print(threading.currentThread().getName() + " => " + str(data))
+            sys.stdout.write(threading.currentThread().getName() + " => " + str(data) + "\n")
 
             if data[0] == "conf":
                 if data[1] == "load": # Load config
@@ -119,10 +117,10 @@ def ipcHandle(conn):
                                     float(data[2][4]) + float(data[2][2])]
 
                             # Capture to a file
-                            cam.capture("/tmp/doccam/pic.png")
+                            cam.capture("/tmp/doccam_pic.png")
 
                             # Load captured image into a new PIL image object
-                            img = Image.open("/tmp/doccam/pic.png")
+                            img = Image.open("/tmp/doccam_pic.png")
                             w, h = img.size
 
                             # Crop the image and convert the relative
@@ -207,7 +205,7 @@ def ipcHandle(conn):
 
                     wifiPass = passwd
                     wifiChanged = True
-                    print('New Password: "{!s}"'.format(passwd))
+                    sys.stdout.write('New Password: "{!s}"'.format(passwd))
                     conn.send(wifiPass)
                 if data[1] == "pass": # Respond with the current password
                     conn.send(wifiPass)
@@ -221,8 +219,6 @@ def ipcHandle(conn):
     except Exception as e:
         raise
 
-    print("Done Handling IPC request")
-
 def videoListen():
     """Waits for connections to port 8101 and sends a stream encoded in h264"""
     global cam
@@ -235,17 +231,16 @@ def videoListen():
         try:
             time.sleep(1)
             conn = sockServer.accept()
-            print("Sending Video Stream to " + str(conn[1]))
+            sys.stdout.write("Sending video stream to " + str(conn[1]))
 
             cam.start_recording(conn[0].makefile("wb"), format="h264");
             cam.wait_recording(300)
         except Exception as e:
-            print(e)
+            sys.stdout.write(e)
             if e == "KeyboardInterrupt":
                 raise
             pass
         finally:
-            print("Video Stream Ended!")
             if cam.recording:
                 try:
                     cam.stop_recording()
@@ -270,20 +265,20 @@ def loadConfig():
     for line in wifilines:
         if(line.startswith("ssid=")):
             wifiSsid = line.split("=", 1)[1].strip()
-            print('SSID: "{!s}"'.format(wifiSsid))
+            sys.stdout.write('SSID: "{!s}"'.format(wifiSsid))
         if(line.startswith("wpa_passphrase=")):
             wifiPass = line.split("=", 1)[1].strip()
-            print('PASS: "{!s}"'.format(wifiPass))
+            sys.stdout.write('PASS: "{!s}"'.format(wifiPass))
     wifiChanged = False
 
 def saveConfig():
     """Saves all of the changed configuration variables"""
-    print("Saving Config")
+    sys.stdout.write("Saving config")
     # Hostapd:
 
     global wifiSsid, wifiPass, wifiChanged
     if wifiChanged:
-        print("Saving hostapd config")
+        sys.stdout.write("Saving hostapd config")
 
         wifilines = None
         with io.open("/etc/hostapd/hostapd.conf") as file:
@@ -301,18 +296,11 @@ def saveConfig():
             for line in wifilines:
                 file.write(line)
 
-        print("Restarting hostapd...")
+        sys.stdout.write("Restarting hostapd...")
         subprocess.call(["sudo", "service", "hostapd", "restart"])
     else:
-        print("Not saving hostapd config")
-    print("Done Saving Config")
-
-print("***********************************")
-print("*                                 *")
-print("*  Raspberry Pi Dokumentenkamera  *")
-print("*                                 *")
-print("***********************************")
-print
+        sys.stdout.write("Not saving hostapd config")
+    sys.stdout.write("Done saving config")
 
 
 global resVal, flipVal, rotateVal, cropVal
@@ -337,32 +325,25 @@ enableIPC = True
 # PiCamera init
 cameraL.acquire()
 global cam
-print("Initializing camera... ")
 cam = picamera.PiCamera()
 setCamBounds(resVal, cropVal)
 cam.framerate = 30
 cameraL.release()
 
 # Config
-print("Loading config... ")
 loadConfig()
-print("done")
 
-print("Starting background threads...")
 # IPC
 threadServerIPC = threading.Thread(target = ipcListen)
 threadServerIPC.daemon = True
 threadServerIPC.start()
-print("- IPC")
 
 # h264 Vido Server
 threadServerVideo = threading.Thread(target = videoListen)
 threadServerVideo.daemon = True
 threadServerVideo.start()
-print("- h264 Video")
 
-print
-print("------------- Ready -------------")
+sys.stdout.write("Started doccam-core daemon")
 
-raw_input()
-enableIPC = False
+while True:
+    time.sleep(1000)
