@@ -25,7 +25,7 @@ import sys, time
 import socket, subprocess, json
 
 def comm(data):
-    """Communicate with camera.py using a socket"""
+    """Communicate with doccam-core using a socket"""
     sock = socket.socket()
     sock.connect(("127.3.1.4", 3141))
 
