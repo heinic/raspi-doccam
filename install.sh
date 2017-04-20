@@ -50,12 +50,13 @@ echo "y\n" | sudo apt-get upgrade
 sudo apt-get -y install raspberrypi-bootloader adafruit-pitft-helper raspberrypi-kernel python-picamera python-pil python-tk xserver-xorg xinit xserver-xorg-video-fbdev apache2 dnsmasq lightdm #git
 
 # install modified hostapd from source
+sudo bash << EOF
+cd /usr/local/src/
 git clone https://github.com/jenssegers/RTL8188-hostapd
 cd RTL8188-hostapd/hostapd/
 make
-sudo make install
-
-cd ../..
+make install
+EOF
 
 # config
 sudo ln -s /etc/apache2/mods-available/cgi.load /etc/apache2/mods-enabled/
@@ -67,13 +68,19 @@ sudo cp config/dnsmasq-doccam.conf /etc/dnsmasq.d/
 # pitft config; chooses:
 # 1) not to show console output on the pitft on startup
 # 2) not to use GPIO #23 as shutdown
-echo -e "n\nn\n" | sudo adafruit-pitft-helper -t 22
+if ! grep -Fq "adafruit-pitft-helper" /boot/config.txt; then
+  echo -e "n\nn\n" | sudo adafruit-pitft-helper -t 22;
+fi
 
 sudo chmod 644 /etc/network/interfaces /etc/hostapd/hostapd.conf /etc/dnsmasq.d/dnsmasq-doccam.conf
 
 # disable screen blanking
 # from https://raspberrypi.stackexchange.com/a/2103
-echo -e "\n[SeatDefaults]\nxserver-command=X -s 0 -dpms" >> /etc/lightdm/lightdm.conf
+sudo bash << EOF
+if ! grep -Fq "xserver-command=X -s 0 -dpms" /etc/lightdm/lightdm.conf; then
+  echo -e "\n[SeatDefaults]\nxserver-command=X -s 0 -dpms" >> /etc/lightdm/lightdm.conf;
+fi
+EOF
 
 # enable daemons
 sudo update-rc.d hostapd defaults
