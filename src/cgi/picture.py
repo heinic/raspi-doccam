@@ -52,7 +52,7 @@ try:
         imgdata = sock.recv(4096)
         if not imgdata: raise error('')
         sys.stdout.write(imgdata)
-        sock.settimeout(0.5)
+        sock.settimeout(1)
 except Exception as e:
     pass
 sock.close()
