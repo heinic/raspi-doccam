@@ -102,6 +102,7 @@ EOF
 sudo update-rc.d hostapd defaults
 sudo update-rc.d hostapd enable
 sudo update-rc.d dnsmasq enable
+sudo update-rc.d doccam-core defaults
 sudo update-rc.d doccam-core enable
 
 # autostart the gui watchdog
