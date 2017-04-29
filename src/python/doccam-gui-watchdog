@@ -24,7 +24,10 @@ import subprocess, threading
 
 def start_gui():
     """Starts the camera gui"""
-    retc = subprocess.call(["/usr/local/bin/doccam-gui"])
+    retc = subprocess.call(["su", "pi", "-c", "/usr/local/bin/doccam-gui"])
+
+    if(retc == 127):
+        subprocess.call(["shutdown", "0", "-h"])
 
 def start_cli():
     """Starts a command line. However the user has to interact with it before it
@@ -58,7 +61,7 @@ if len(sys.argv) == 1:
     while True:
         start_gui()
         start_cli()
-        
+
 if len(sys.argv) == 2:
     if sys.argv[1] == "secterm": start_secure_terminal()
 

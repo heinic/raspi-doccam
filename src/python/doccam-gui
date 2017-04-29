@@ -129,10 +129,13 @@ class DialogScreen(MenuScreen):
 class MainMenu(SimpleScreen):
     def __init__(self):
         super(MainMenu, self).__init__("Raspi document camera",
-        ("", "", "Settings", "Quit"), (0, 0, self.openOptions, exit))
+        ("", "", "Settings", "Shut down"), (0, 0, self.openOptions, self.shutdown))
 
     def openOptions(self):
         showScreen(SettingsMenu())
+
+    def shutdown(self):
+        sys.exit(127)
 
 class SettingsMenu(SimpleScreen):
     def __init__(self):

@@ -81,6 +81,10 @@ sudo cp config/interfaces /etc/network/
 sudo cp config/hostapd.conf /etc/hostapd/
 sudo cp config/dnsmasq-doccam.conf /etc/dnsmasq.d/
 
+# allow the gui watchdog to be run as root
+sudo cp config/040_doccam /etc/sudoers.d/
+sudo chmod 400 /etc/sudoers.d/040_doccam
+
 # pitft config; chooses:
 # 1) not to show console output on the pitft on startup
 # 2) not to use GPIO #23 as shutdown
@@ -108,7 +112,7 @@ sudo update-rc.d doccam-core enable
 # autostart the gui watchdog
 cat > /home/pi/.xsession << EOF
 #!/bin/bash
-doccam-gui-watchdog
+sudo doccam-gui-watchdog
 EOF
 
 # force sudo to be used with a password

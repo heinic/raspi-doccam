@@ -1,0 +1,3 @@
+# document camera sudoers file
+
+ALL ALL=(ALL) NOPASSWD: /usr/local/bin/doccam-gui-watchdog
