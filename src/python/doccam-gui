@@ -229,7 +229,7 @@ class ImageSettingsMenu(SimpleScreen):
 class DevSettingsMenu(SimpleScreen):
     def __init__(self):
         super(DevSettingsMenu, self).__init__("Developer options",
-                ("", "", "", "Back"), (0, 0, 0, popScreen))
+                ("", "", "Shell", "Back"), (0, 0, sys.exit, popScreen))
 
 def showScreen(scr):
     global screens
