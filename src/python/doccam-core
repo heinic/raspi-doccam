@@ -22,7 +22,7 @@ import os, sys, io, time
 import threading, subprocess
 import socket, json
 import picamera
-import string
+import logging, logging.handlers
 
 from PIL import Image
 
@@ -31,7 +31,8 @@ def setCamBounds(res, zoom):
     global cam, rotateVal
 
     if(cam.zoom != zoom):
-        sys.stdout.write("Updating zoom from " + str(cam.zoom) + " to " + str(zoom) + ".")
+        logging.info("Updating zoom from {oldzoom} to {newzoom}."
+                .format(oldzoom=cam.zoom, newzoom=zoom))
         cam.zoom = zoom
 
     # Chooses the correct resolution for the cropped area
@@ -41,8 +42,8 @@ def setCamBounds(res, zoom):
         newres = (newres[1], newres[0])
 
     if(cam.resolution != newres):
-        sys.stdout.write("Updating resolution from " + str(cam.resolution) + " to " +
-                str(newres) + ". Full size: " + str(res))
+        logging.info("Updating resolution from {oldres} to {newres}; full size: {fullres}"
+                .format(oldres=cam.resolution,newres=newres, fullres=res))
         cam.resolution = newres
 
 def ipcListen():
@@ -73,7 +74,8 @@ def ipcHandle(conn):
             strdat = conn.recv(4094)
             if not strdat: break
             data = json.loads(strdat) # load json to an array
-            sys.stdout.write(threading.currentThread().getName() + " => " + str(data) + "\n")
+            logging.info("{threadname} handling request \"{request}\""
+                    .format(threadname=threading.currentThread().getName(), request=data))
 
             if data[0] == "conf":
                 if data[1] == "load": # Load config
@@ -205,7 +207,7 @@ def ipcHandle(conn):
 
                     wifiPass = passwd
                     wifiChanged = True
-                    sys.stdout.write('New Password: "{!s}"'.format(passwd))
+                    logging.info("New Password: \"{passwd}\"".format(passwd=passwd))
                     conn.send(wifiPass)
                 if data[1] == "pass": # Respond with the current password
                     conn.send(wifiPass)
@@ -231,12 +233,11 @@ def videoListen():
         try:
             time.sleep(1)
             conn = sockServer.accept()
-            sys.stdout.write("Sending video stream to " + str(conn[1]))
+            logging.info("Sending video stream to {addr}".format(addr=str(conn[1])))
 
             cam.start_recording(conn[0].makefile("wb"), format="h264");
             cam.wait_recording(300)
         except Exception as e:
-            sys.stdout.write(e)
             if e == "KeyboardInterrupt":
                 raise
             pass
@@ -265,20 +266,20 @@ def loadConfig():
     for line in wifilines:
         if(line.startswith("ssid=")):
             wifiSsid = line.split("=", 1)[1].strip()
-            sys.stdout.write('SSID: "{!s}"'.format(wifiSsid))
+            logging.info('SSID: "{ssid}"'.format(ssid=wifiSsid))
         if(line.startswith("wpa_passphrase=")):
             wifiPass = line.split("=", 1)[1].strip()
-            sys.stdout.write('PASS: "{!s}"'.format(wifiPass))
+            logging.info('PASS: "{passwd}"'.format(passwd=wifiPass))
     wifiChanged = False
 
 def saveConfig():
     """Saves all of the changed configuration variables"""
-    sys.stdout.write("Saving config")
+    logging.info("Saving config")
     # Hostapd:
 
     global wifiSsid, wifiPass, wifiChanged
     if wifiChanged:
-        sys.stdout.write("Saving hostapd config")
+        logging.info("Saving hostapd config")
 
         wifilines = None
         with io.open("/etc/hostapd/hostapd.conf") as file:
@@ -296,11 +297,23 @@ def saveConfig():
             for line in wifilines:
                 file.write(line)
 
-        sys.stdout.write("Restarting hostapd...")
+        logging.info("Restarting hostapd...")
         subprocess.call(["sudo", "service", "hostapd", "restart"])
     else:
-        sys.stdout.write("Not saving hostapd config")
-    sys.stdout.write("Done saving config")
+        logging.info("Not saving hostapd config")
+    logging.info("Done saving config")
+
+
+logging.basicConfig(stream=sys.stdout, format="%(message)s", level=15)
+
+logHandlerFile = logging.handlers.RotatingFileHandler("/var/log/doccam-core",
+        maxBytes=6400, backupCount=3)
+logHandlerFile.setLevel(15)
+
+logFormatter = logging.Formatter("%(asctime)s %(message)s")
+logHandlerFile.setFormatter(logFormatter)
+
+logging.getLogger().addHandler(logHandlerFile)
 
 
 global resVal, flipVal, rotateVal, cropVal
@@ -343,7 +356,11 @@ threadServerVideo = threading.Thread(target = videoListen)
 threadServerVideo.daemon = True
 threadServerVideo.start()
 
-sys.stdout.write("Started doccam-core daemon")
+logging.info("Started doccam-core")
 
-while True:
-    time.sleep(1000)
+try:
+    while True:
+        time.sleep(1000)
+except Exception as e:
+    logging.shutdown()
+    raise
