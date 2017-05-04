@@ -74,6 +74,9 @@ sudo chmod 755 /usr/local/bin/doccam-*
 sudo cp src/sh/doccam-core /etc/init.d
 sudo chmod 755 /etc/init.d/doccam-core
 
+sudo cp -r src/python/doccam/ /usr/local/lib/python2.7/dist-packages/
+sudo chmod 755 /usr/local/lib/python2.7/dist-packages/doccam/*
+
 # config
 sudo ln -s /etc/apache2/mods-available/cgi.load /etc/apache2/mods-enabled/
 

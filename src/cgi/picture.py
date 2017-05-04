@@ -19,7 +19,7 @@
 #
 
 import os, sys
-import socket, json
+from doccam.comm import capturePic
 
 # POST input
 query = {}
@@ -35,24 +35,13 @@ if 'QUERY_STRING' in os.environ:
             query[varparts[0]] = varparts[1]
 
 # Transfer settings for IPC
-data = ['cam', 'cappic_stream', '']
-if (query and query['type'] == 'thumb'): data[2] = 'thumb'
-if (query and query['type'] == 'hires'): data[2] = 'hires'
-if (query and query['crop']): data[2] += ';' + query['crop']
+extra = ""
+if (query and query['type'] == 'thumb'): extra = 'thumb'
+if (query and query['type'] == 'hires'): extra = 'hires'
+if (query and query['crop']): extra += ';' + query['crop']
 
-# IPC
-sock = socket.socket()
-sock.connect(('127.3.1.4', 3141))
-sock.send(json.dumps(data))
-
-# Response
+# response
 print('Content-type: image/png\n')
-try:
-    while True:
-        imgdata = sock.recv(4096)
-        if not imgdata: raise error('')
-        sys.stdout.write(imgdata)
-        sock.settimeout(1)
-except Exception as e:
-    pass
-sock.close()
+
+# capture and send picture
+capturePic(sys.stdout, extra=extra)

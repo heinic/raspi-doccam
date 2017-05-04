@@ -17,32 +17,3 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-
-import os, sys
-from doccam.comm import sendCmd
-
-# POST input
-query = {}
-if not 'QUERY_STRING' in os.environ: sys.exit()
-
-querystring = os.environ['QUERY_STRING']
-if not querystring: sys.exit()
-
-queryvars = querystring.split('&')
-for queryvar in queryvars:
-    varparts = queryvar.split('=', 1)
-    query[varparts[0]] = varparts[1]
-
-
-if not query['setting']: sys.exit()
-sparts = query['setting'].split('_')
-if not len(sparts) == 2: sys.exit()
-
-if not 'value' in query: query['value'] = ''
-
-# IPC
-response = sendCmd((sparts[0], sparts[1], query['value']))
-
-# Response
-print('Content-type: text/plain\n')
-sys.stdout.write(response)

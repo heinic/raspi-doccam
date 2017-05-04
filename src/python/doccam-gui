@@ -22,21 +22,9 @@ from Tkinter import *
 from RPi import GPIO
 
 import sys, time
-import socket, subprocess, json
+import subprocess
 
-def comm(data):
-    """Communicate with doccam-core using a socket"""
-    sock = socket.socket()
-    sock.connect(("127.3.1.4", 3141))
-
-    strdat = json.dumps(data)
-
-    sock.send(strdat)
-    retdat = sock.recv(4096)
-
-    sock.close()
-    print("IPC: " + strdat + "; answer: " + retdat)
-    return retdat
+from doccam.comm import sendCmd
 
 global screens
 screens = []
@@ -174,8 +162,8 @@ class NetworkSettingsMenu(SimpleScreen):
         self.update()
 
     def update(self):
-        self.info = ("WiFi - SSID: " + comm(("wifi", "ssid", "")) +
-                "\nPassword: " + comm(("wifi", "pass", "")) + "\n")
+        self.info = ("WiFi - SSID: " + sendCmd(("wifi", "ssid", "")) +
+                "\nPassword: " + sendCmd(("wifi", "pass", "")) + "\n")
 
     def changeWIFIPass(self):
         dialog = DialogScreen("Change WiFi password",
@@ -187,7 +175,7 @@ class NetworkSettingsMenu(SimpleScreen):
     def onChangeWifiPass(self, num):
         if(num == 0):
             print("Changing WiFi Password")
-            comm(("wifi", "newpass", ""))
+            sendCmd(("wifi", "newpass", ""))
             self.update()
 
 class ImageSettingsMenu(SimpleScreen):
@@ -205,7 +193,7 @@ class ImageSettingsMenu(SimpleScreen):
     def onChangeFlip(self, num):
         if(num < 3):
             flips = "n", "h", "v"
-            comm(("cam", "flip", flips[num]))
+            sendCmd(("cam", "flip", flips[num]))
 
     def changeRot(self):
         dialog = DialogScreen("Rotate image", ("No rotation", "90°\nclockwise",
@@ -213,7 +201,7 @@ class ImageSettingsMenu(SimpleScreen):
         showScreen(dialog)
 
     def onChangeRot(self, num):
-        comm(("cam", "rot", str(num * 90)))
+        sendCmd(("cam", "rot", str(num * 90)))
 
     def changePrev(self):
         dialog = DialogScreen("Preview", ("Disable", "Enable", "", "Back"),
@@ -224,7 +212,7 @@ class ImageSettingsMenu(SimpleScreen):
 
     def onChangePrev(self, num):
         if (num < 2):
-            comm(("cam", "preview", str(num)))
+            sendCmd(("cam", "preview", str(num)))
 
 class DevSettingsMenu(SimpleScreen):
     def __init__(self):
