@@ -18,21 +18,21 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import os, sys
-from doccam.comm import capturePic
-from doccam.cgihelper import readGetQuery
+import os
 
-# POST input
-query = readGetQuery()
+def readGetQuery():
+    """Read the GET query string supplied by apache2 and seperate it into
+    key-value pairs"""
 
-# Transfer settings for IPC
-extra = ""
-if ('type' in query and query['type'] == 'thumb'): extra = 'thumb'
-if ('type' in query and query['type'] == 'hires'): extra = 'hires'
-if ('crop' in query and query['crop']): extra += ';' + query['crop']
+    if not 'QUERY_STRING' in os.environ: return {}
 
-# response
-print('Content-type: image/png\n')
+    query = {}
+    querystring = os.environ['QUERY_STRING']
+    if not os.environ['QUERY_STRING']: return {}
 
-# capture and send picture
-capturePic(sys.stdout, extra=extra)
+    queryvars = querystring.split('&')
+    for queryvar in queryvars:
+        varinfo = queryvar.split('=', 1)
+        query[varinfo[0]] = varinfo[1]
+
+    return query

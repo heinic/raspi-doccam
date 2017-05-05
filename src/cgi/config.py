@@ -20,19 +20,10 @@
 
 import os, sys
 from doccam.comm import sendCmd
+from doccam.cgihelper import readGetQuery
 
 # POST input
-query = {}
-if not 'QUERY_STRING' in os.environ: sys.exit()
-
-querystring = os.environ['QUERY_STRING']
-if not querystring: sys.exit()
-
-queryvars = querystring.split('&')
-for queryvar in queryvars:
-    varparts = queryvar.split('=', 1)
-    query[varparts[0]] = varparts[1]
-
+query = readGetQuery()
 
 if not query['setting']: sys.exit()
 sparts = query['setting'].split('_')
