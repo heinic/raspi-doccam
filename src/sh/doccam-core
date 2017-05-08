@@ -16,7 +16,7 @@ start() {
     return 1
   fi
   echo "Starting service..." >&2
-  su -c "/usr/local/bin/doccam-core & echo \$!" > /var/run/doccam-core.pid
+  su -c "/usr/local/bin/doccam-core &> /dev/null & echo \$!" > /var/run/doccam-core.pid
   echo "Service started!" >&2
 }
 
