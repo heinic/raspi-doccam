@@ -117,7 +117,10 @@ class DialogScreen(MenuScreen):
 class MainMenu(SimpleScreen):
     def __init__(self):
         super(MainMenu, self).__init__("Raspi document camera",
-        ("", "", "Settings", "Shut down"), (0, 0, self.openOptions, self.shutdown))
+        ("", "Image", "Settings", "Shut down"), (0, self.openImage, self.openOptions, self.shutdown))
+
+    def openImage(self):
+        showScreen(ImageSettingsMenu())
 
     def openOptions(self):
         showScreen(SettingsMenu())
@@ -128,8 +131,8 @@ class MainMenu(SimpleScreen):
 class SettingsMenu(SimpleScreen):
     def __init__(self):
         super(SettingsMenu, self).__init__("Settings",
-        ("Network", "Image", "More...", "Back"),
-        (self.openNetwork, self.openImage, self.openOther, popScreen))
+        ("Network", "Preview", "More...", "Back"),
+        (self.openNetwork, self.changePrev, self.openOther, popScreen))
 
     def openOther(self):
         menuOther = SimpleScreen("More Settings",
@@ -139,9 +142,6 @@ class SettingsMenu(SimpleScreen):
 
     def openNetwork(self):
         showScreen(NetworkSettingsMenu())
-
-    def openImage(self):
-        showScreen(ImageSettingsMenu())
 
     def openDev(self):
         showScreen(DevSettingsMenu())
@@ -153,6 +153,17 @@ class SettingsMenu(SimpleScreen):
                 "Source code: licensed under GNU GPL-3.0\n" +
                 "https://github.com/heinic/raspi-doccam\n")
         showScreen(helpMenu)
+
+    def changePrev(self):
+        dialog = DialogScreen("Preview", ("Disable", "Enable", "", "Back"),
+                self.onChangePrev)
+        dialog.info = ("Choose whether a preview should\n" +
+                "be available on the HDMI port.\n")
+        showScreen(dialog)
+
+    def onChangePrev(self, num):
+        if (num < 2):
+            sendCmd(("cam", "preview", str(num)))
 
 class NetworkSettingsMenu(SimpleScreen):
     def __init__(self):
@@ -181,8 +192,8 @@ class NetworkSettingsMenu(SimpleScreen):
 class ImageSettingsMenu(SimpleScreen):
     def __init__(self):
         super(ImageSettingsMenu, self).__init__("Image Settings",
-                ("Rotate", "Mirror", "Preview", "Back"),
-                (self.changeRot, self.changeFlip, self.changePrev, popScreen))
+                ("Rotate", "Mirror", "Zoom", "Back"),
+                (self.changeRot, self.changeFlip, self.openZoom, popScreen))
 
     def changeFlip(self):
         dialog = DialogScreen("Mirror image",
@@ -203,16 +214,11 @@ class ImageSettingsMenu(SimpleScreen):
     def onChangeRot(self, num):
         sendCmd(("cam", "rot", str(num * 90)))
 
-    def changePrev(self):
-        dialog = DialogScreen("Preview", ("Disable", "Enable", "", "Back"),
-                self.onChangePrev)
-        dialog.info = ("Choose whether a preview should\n" +
-                "be available on the HDMI port.\n")
-        showScreen(dialog)
-
-    def onChangePrev(self, num):
-        if (num < 2):
-            sendCmd(("cam", "preview", str(num)))
+    def openZoom(self):
+        zoomMenu = SimpleScreen("Zoom", ("Zoom In", "Zoom Out", "", "Back"),
+                (lambda: sendCmd(("cam", "zoom", "+")),
+                lambda: sendCmd(("cam", "zoom", "-")), 0, popScreen))
+        showScreen(zoomMenu)
 
 class DevSettingsMenu(SimpleScreen):
     def __init__(self):

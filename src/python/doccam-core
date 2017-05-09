@@ -26,18 +26,18 @@ import logging, logging.handlers
 
 from PIL import Image
 
-def setCamBounds(res, zoom):
+def setCamBounds(res, crop):
     """Updates the resolution and crop of the camera"""
     global cam, rotateVal
 
-    if(cam.zoom != zoom):
-        logging.info("Updating zoom from {oldzoom} to {newzoom}."
-                .format(oldzoom=cam.zoom, newzoom=zoom))
-        cam.zoom = zoom
+    if(cam.crop != crop):
+        logging.info("Updating crop from {oldcrop} to {newcrop}."
+                .format(oldcrop=cam.crop, newcrop=crop))
+        cam.crop = crop
 
     # Chooses the correct resolution for the cropped area
-    newres = (int(res[0] * zoom[2]),
-            int(res[1] * zoom[3]))
+    newres = (int(res[0] * crop[2]),
+            int(res[1] * crop[3]))
     if(rotateVal % 180 == 90):
         newres = (newres[1], newres[0])
 
@@ -113,8 +113,8 @@ def ipcHandle(conn):
                             setCamBounds(res, cropVal)
 
                             # Build an array containing the coordinates of the
-                            # corners of the zoom rectangle
-                            zoom = [float(data[2][1]), float(data[2][2]),
+                            # corners of the crop rectangle
+                            crop = [float(data[2][1]), float(data[2][2]),
                                     float(data[2][3]) + float(data[2][1]),
                                     float(data[2][4]) + float(data[2][2])]
 
@@ -127,8 +127,8 @@ def ipcHandle(conn):
 
                             # Crop the image and convert the relative
                             # coordinates to pixel space
-                            img.crop((int(zoom[0] * (w - 1)), int(zoom[1] * (h - 1)),
-                                      int(zoom[2] * (w - 1)), int(zoom[3] * (h - 1))
+                            img.crop((int(crop[0] * (w - 1)), int(crop[1] * (h - 1)),
+                                      int(crop[2] * (w - 1)), int(crop[3] * (h - 1))
                                       )).save(conn.makefile("wb"), "png")
                     except Exception as e:
                         cameraL.release()
@@ -183,6 +183,32 @@ def ipcHandle(conn):
                             cropVal = newCrop
                             cam.crop = cropVal
                             conn.send("success")
+                if data[1] == "zoom":
+                    diff = 0
+                    if(data[2] == "+"): diff = -0.1
+                    elif(data[2] == "-"): diff =  0.1
+                    else:
+                        conn.send("Invalid argument")
+                        break
+
+                    def clamp(minV, maxV, value):
+                        return max(minV, min(maxV, value))
+
+                    startCrop = [cropVal[i] for i in range(len(cropVal))]
+                    cropVal[2] += diff; cropVal[3] += diff
+
+                    cropVal[2] = clamp(0.1, 1, cropVal[2])
+                    cropVal[3] = clamp(0.1, 1, cropVal[3])
+
+                    cropVal[0] += (startCrop[2] - cropVal[2]) / 2.0
+                    cropVal[1] += (startCrop[3] - cropVal[3]) / 2.0
+
+                    cropVal[0] = clamp(0, 1 - cropVal[2], cropVal[0])
+                    cropVal[1] = clamp(0, 1 - cropVal[3], cropVal[1])
+
+                    cam.crop = cropVal
+                    conn.send("success")
+
                 # if data[1] == "awb":
                 #     global awbVal, awbGains
                 #     if data[2] == "":
@@ -320,7 +346,7 @@ global resVal, flipVal, rotateVal, cropVal
 resVal = (1296, 972)
 flipVal = "n"
 rotateVal = 0
-cropVal = (0, 0, 1, 1)
+cropVal = [0, 0, 1, 1]
 
 global previewVal
 previewVal = False
