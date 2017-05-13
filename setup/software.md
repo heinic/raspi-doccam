@@ -24,4 +24,4 @@ Clone the source code repository of this project using
 `git clone https://github.com/heinic/raspi-doccam`. Navigate to the newly
 created folder with `cd raspi-doccam`.
 
-Now you need to run the installation script: `./install.sh`
+Lastly, you need to run the installation: `sudo make install`
