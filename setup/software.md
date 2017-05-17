@@ -6,7 +6,7 @@ and load it onto the SD card. Instructions can be found on the download page.
 Start up the Raspberry Pi and log in with the user `pi` and the password
 `raspberry`. Use `sudo raspi-config` and choose the following options:
 - Expand the Filesystem
-- Change the language, keyboard layout and timezone
+- If needed, update the language, keyboard layout and timezone
 - Change the password  
   This password is only required for administration purposes
 - Enable the camera
