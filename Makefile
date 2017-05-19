@@ -121,7 +121,8 @@ require-root::
 
 enable-sudo-passwd:: require-root
 	install -m 400 config/040_doccam /etc/sudoers.d/
-	mv /etc/sudoers.d/010_pi-nopasswd /etc/sudoers.d/010_pi-nopasswd~
+	if [ -f /etc/sudoers.d/010_pi-nopasswd ]; then \
+	  mv /etc/sudoers.d/010_pi-nopasswd /etc/sudoers.d/010_pi-nopasswd~; fi
 	@echo "You can no longer use sudo without a password; to revert this change remove the trailing tilde from the file named /etc/sudoers.d/010_pi-nopasswd~"
 
 clean:
