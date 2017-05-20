@@ -21,39 +21,17 @@
 import os, sys, io, time
 import threading, subprocess
 import socket, json
-import picamera
-import logging, logging.handlers
+import doccam._camera as camera
 
-from PIL import Image
+import doccam.logger as logger
 
-def setCamBounds(res, crop):
-    """Updates the resolution and crop of the camera"""
-    global cam, rotateVal
-
-    if(cam.crop != crop):
-        logging.info("Updating crop from {oldcrop} to {newcrop}."
-                .format(oldcrop=cam.crop, newcrop=crop))
-        cam.crop = crop
-
-    # Chooses the correct resolution for the cropped area
-    newres = (int(res[0] * crop[2]),
-            int(res[1] * crop[3]))
-    if(rotateVal % 180 == 90):
-        newres = (newres[1], newres[0])
-
-    if(cam.resolution != newres):
-        logging.info("Updating resolution from {oldres} to {newres}; full size: {fullres}"
-                .format(oldres=cam.resolution,newres=newres, fullres=res))
-        cam.resolution = newres
 
 def ipcListen():
-    """Waits for requests via IPC and handles them in seperate threads"""
-    global enableIPC
-
+    """Waits for requests via IPC and handles them in seperate threads."""
     sockServer = socket.socket()
     sockServer.bind(("127.3.1.4", 3141));
 
-    while enableIPC:
+    while True:
         sockServer.listen(1)
         # Accept the next connection
         conn = sockServer.accept()
@@ -64,8 +42,6 @@ def ipcListen():
 
 def ipcHandle(conn):
     """Handle IPC requests"""
-    global cam, cameraL
-    global rotateVal, flipVal, cropVal, resVal
     global wifiSsid, wifiPass, wifiChanged
 
     listen = True
@@ -74,7 +50,7 @@ def ipcHandle(conn):
             strdat = conn.recv(4094)
             if not strdat: break
             data = json.loads(strdat) # load json to an array
-            logging.info("{threadname} handling request \"{request}\""
+            logger.log("{threadname} handling request \"{request}\""
                     .format(threadname=threading.currentThread().getName(), request=data))
 
             if data[0] == "conf":
@@ -86,103 +62,74 @@ def ipcHandle(conn):
                     conn.send("success")
 
             if data[0] == "cam": # Camera related actions
-                # if data[1] == "cappic": # Save an image at the file path data[2]
-                #     cam.capture(data[2])
-                #     conn.send("success")
                 if data[1] == "cappic_stream": # Capture image and send it via the IPC socket
                     data[2] = data[2].split(';')
-                    res = resVal
 
+                    res = camera.DEFAULT_RESOLUTION
                     # Change the resolution if requested
                     if(data[2][0] and data[2][0] == 'thumb'):
-                        res = (160, 120)
+                        res = camera.THUMB_RESOLUTION
                     if(data[2][0] and data[2][0] == 'hires'):
-                        res = cam.MAX_RESOLUTION
+                        res = camera.MAX_RESOLUTION
 
                     try:
-                        # Use the camera semaphore to ensure the camera is only
-                        # used by one thread at a time
-                        cameraL.acquire()
-
                         if(len(data[2]) != 5): # No crop requested
-                            # Send image without cropping
-                            setCamBounds(res, cropVal)
-                            cam.capture(conn.makefile("wb"), format="png")
+                            camera.capture(conn.makefile("wb"), res=res)
 
                         else: # Crop requested
-                            setCamBounds(res, cropVal)
+                            crop = (float(data[2][1]), float(data[2][2]),
+                                    float(data[2][3]), float(data[2][4]))
+                            camera.captureArea(conn.makefile("wb"), res=res, crop=crop)
 
-                            # Build an array containing the coordinates of the
-                            # corners of the crop rectangle
-                            crop = [float(data[2][1]), float(data[2][2]),
-                                    float(data[2][3]) + float(data[2][1]),
-                                    float(data[2][4]) + float(data[2][2])]
-
-                            # Capture to a file
-                            cam.capture("/tmp/doccam_pic.png")
-
-                            # Load captured image into a new PIL image object
-                            img = Image.open("/tmp/doccam_pic.png")
-                            w, h = img.size
-
-                            # Crop the image and convert the relative
-                            # coordinates to pixel space
-                            img.crop((int(crop[0] * (w - 1)), int(crop[1] * (h - 1)),
-                                      int(crop[2] * (w - 1)), int(crop[3] * (h - 1))
-                                      )).save(conn.makefile("wb"), "png")
                     except Exception as e:
-                        cameraL.release()
                         raise
-                    listen = False
 
-                    # Reset camera and release lock
-                    setCamBounds(resVal, cropVal)
-                    cameraL.release()
+                    listen = False
                 if data[1] == "flip":
                     if data[2] == "": # Respond with the current flip
-                        conn.send(flipVal)
+                        if(camera.cam.hflip): conn.send("h")
+                        elif(camera.cam.vflip): conn.send("v")
+                        else: conn.send("n")
                     else: # Change flip
-                        if(data[2] == "n" or data[2] == "h" or data[2] == "v"):
-                            flipVal = data[2]
-                            cam.hflip = flipVal == "h"
-                            cam.vflip = flipVal == "v"
+                        flip = data[2]
+                        if(flip == "n" or flip == "h" or flip == "v"):
+                            camera.cam.hflip = flip == "h"
+                            camera.cam.vflip = flip == "v"
 
                             conn.send("success")
                 if data[1] == "rot":
                     if data[2] == "": # Respond with current rotation
-                        conn.send(str(rotateVal))
+                        conn.send(str(camera.cam.rotation))
                     else: # Change rotation
                         try:
-                            if(int(data[2]) % 90 == 0 and int(data[2]) >= 0 and int(data[2]) < 360):
-                                rotateVal = int(data[2])
-                                cam.rotation = rotateVal
-
-                                setCamBounds(resVal, cropVal)
-
+                            if(int(data[2]) in (0, 90, 180, 270)):
+                                camera.cam.rotation = int(data[2])
+                                camera.setBounds(camera.DEFAULT_RESOLUTION, camera.globalCrop)
                                 conn.send("success")
-                        except ValueError as e: # EAFP
-                            pass
+                        except ValueError as e: pass # EAFP
+
                 if data[1] == "preview":
-                    global previewVal
-                    if data[2] == "": # Send bach the preview status
-                        conn.send(str(int(previewVal)))
+                    if data[2] == "": # Send back the preview status
+                        conn.send("1" if camera.cam.preview else "0")
                     else: # Change preview status
-                        if(data[2] == "0" or data[2] == "1"):
-                            previewVal = data[2] == "1"
-                            if previewVal:
-                                cam.start_preview()
+                        if(data[2] in ("0", "1")):
+                            if data[2] == "1":
+                                camera.cam.start_preview()
                             else:
-                                cam.stop_preview()
+                                camera.cam.stop_preview()
                             conn.send("success")
+
                 if data[1] == "crop":
                     if data[2] == "": # Respond with current crop
-                        conn.send(json.dumps(cropVal))
+                        conn.send(json.dumps(camera.globalCrop))
                     else: # Set global crop
                         newCrop = json.loads(data[2])
                         if(len(newCrop) == 4):
-                            cropVal = newCrop
-                            cam.crop = cropVal
+                            newCrop = [float(i) for i in newCrop]
+                            camera.globalCrop = newCrop
+                            camera.setBounds(camera.DEFAULT_RESOLUTION, newCrop)
                             conn.send("success")
+
                 if data[1] == "zoom":
                     diff = 0
                     if(data[2] == "+"): diff = -0.1
@@ -191,34 +138,8 @@ def ipcHandle(conn):
                         conn.send("Invalid argument")
                         break
 
-                    def clamp(minV, maxV, value):
-                        return max(minV, min(maxV, value))
-
-                    startCrop = [cropVal[i] for i in range(len(cropVal))]
-                    cropVal[2] += diff; cropVal[3] += diff
-
-                    cropVal[2] = clamp(0.1, 1, cropVal[2])
-                    cropVal[3] = clamp(0.1, 1, cropVal[3])
-
-                    cropVal[0] += (startCrop[2] - cropVal[2]) / 2.0
-                    cropVal[1] += (startCrop[3] - cropVal[3]) / 2.0
-
-                    cropVal[0] = clamp(0, 1 - cropVal[2], cropVal[0])
-                    cropVal[1] = clamp(0, 1 - cropVal[3], cropVal[1])
-
-                    cam.crop = cropVal
+                    camera.zoom(diff)
                     conn.send("success")
-
-                # if data[1] == "awb":
-                #     global awbVal, awbGains
-                #     if data[2] == "":
-                #         conn.send(json.dumps(awbVal))
-                #     else:
-                #         awbVal = data[2]
-                #         awbGains = cam.awb_gains
-                #         cam.awb_mode = awbVal
-                #         cam.awb_gains = awbGains
-                #         conn.send("success")
 
             if data[0] == "wifi": # WiFi settings
                 if data[1] == "newpass":
@@ -233,7 +154,7 @@ def ipcHandle(conn):
 
                     wifiPass = passwd
                     wifiChanged = True
-                    logging.info("New Password: \"{passwd}\"".format(passwd=passwd))
+                    logger.log("New Password: \"{passwd}\"".format(passwd=passwd))
                     conn.send(wifiPass)
                 if data[1] == "pass": # Respond with the current password
                     conn.send(wifiPass)
@@ -249,28 +170,27 @@ def ipcHandle(conn):
 
 def videoListen():
     """Waits for connections to port 8101 and sends a stream encoded in h264"""
-    global cam
     sockServer = socket.socket()
     sockServer.bind(("0.0.0.0", 8101));
     sockServer.listen(0)
 
-    while enableIPC:
+    while True:
         conn = None
         try:
             time.sleep(1)
             conn = sockServer.accept()
-            logging.info("Sending video stream to {addr}".format(addr=str(conn[1])))
+            logger.log("Sending video stream to {addr}".format(addr=str(conn[1])))
 
-            cam.start_recording(conn[0].makefile("wb"), format="h264");
-            cam.wait_recording(300)
+            camera.cam.start_recording(conn[0].makefile("wb"), format="h264");
+            camera.cam.wait_recording(300)
         except Exception as e:
             if e == "KeyboardInterrupt":
                 raise
             pass
         finally:
-            if cam.recording:
+            if camera.cam.recording:
                 try:
-                    cam.stop_recording()
+                    camera.cam.stop_recording()
                 except Exception as e: pass
             try:
                 conn[0].shutdown(socket.SHUT_RDWR)
@@ -292,20 +212,20 @@ def loadConfig():
     for line in wifilines:
         if(line.startswith("ssid=")):
             wifiSsid = line.split("=", 1)[1].strip()
-            logging.info('SSID: "{ssid}"'.format(ssid=wifiSsid))
+            logger.log('SSID: "{ssid}"'.format(ssid=wifiSsid))
         if(line.startswith("wpa_passphrase=")):
             wifiPass = line.split("=", 1)[1].strip()
-            logging.info('PASS: "{passwd}"'.format(passwd=wifiPass))
+            logger.log('PASS: "{passwd}"'.format(passwd=wifiPass))
     wifiChanged = False
 
 def saveConfig():
     """Saves all of the changed configuration variables"""
-    logging.info("Saving config")
+    logger.log("Saving config")
     # Hostapd:
 
     global wifiSsid, wifiPass, wifiChanged
     if wifiChanged:
-        logging.info("Saving hostapd config")
+        logger.log("Saving hostapd config")
 
         wifilines = None
         with io.open("/etc/hostapd/hostapd.conf") as file:
@@ -323,51 +243,11 @@ def saveConfig():
             for line in wifilines:
                 file.write(line)
 
-        logging.info("Restarting hostapd...")
+        logger.log("Restarting hostapd...")
         subprocess.call(["sudo", "service", "hostapd", "restart"])
     else:
-        logging.info("Not saving hostapd config")
-    logging.info("Done saving config")
-
-
-logging.basicConfig(stream=sys.stdout, format="%(message)s", level=15)
-
-logHandlerFile = logging.handlers.RotatingFileHandler("/var/log/doccam-core",
-        maxBytes=6400, backupCount=3)
-logHandlerFile.setLevel(15)
-
-logFormatter = logging.Formatter("%(asctime)s %(message)s")
-logHandlerFile.setFormatter(logFormatter)
-
-logging.getLogger().addHandler(logHandlerFile)
-
-
-global resVal, flipVal, rotateVal, cropVal
-resVal = (1296, 972)
-flipVal = "n"
-rotateVal = 0
-cropVal = [0, 0, 1, 1]
-
-global previewVal
-previewVal = False
-
-global cameraL
-cameraL = threading.BoundedSemaphore(value = 1)
-
-# global awbVal, awbGains
-# awbVal = "auto"
-# awbGains = (1, 1)
-
-global enableIPC
-enableIPC = True
-
-# PiCamera init
-cameraL.acquire()
-global cam
-cam = picamera.PiCamera()
-setCamBounds(resVal, cropVal)
-cam.framerate = 30
-cameraL.release()
+        logger.log("Not saving hostapd config")
+    logger.log("Done saving config")
 
 # Config
 loadConfig()
@@ -382,11 +262,11 @@ threadServerVideo = threading.Thread(target = videoListen)
 threadServerVideo.daemon = True
 threadServerVideo.start()
 
-logging.info("Started doccam-core")
+logger.log("Started doccam-core")
 
 try:
     while True:
         time.sleep(1000)
 except Exception as e:
-    logging.shutdown()
+    logger.shutdown()
     raise

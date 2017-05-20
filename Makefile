@@ -52,10 +52,12 @@ install-hostapd:: require-root install
 
 # doccam source files
 files-py = src/python/doccam-core src/python/doccam-gui src/python/doccam-gui-watchdog
-files-py-mod = src/python/doccam/__init__.py src/python/doccam/cgihelper.py src/python/doccam/comm.py
+files-py-mod = src/python/doccam/__init__.py src/python/doccam/cgihelper.py \
+  src/python/doccam/comm.py src/python/doccam/_camera.py \
+	src/python/doccam/logger.py
 files-cgi = src/cgi/config.py src/cgi/picture.py
 files-html = src/html/about.html src/html/control.html src/html/index.html \
-src/html/load-placeholder.png src/html/scripts.js src/html/style.css
+  src/html/load-placeholder.png src/html/scripts.js src/html/style.css
 
 install-doccam: require-root install $(files-py) $(files-py-mod) $(files-cgi) $(files-html) src/sh/doccam-core
 	install -m 755 $(files-py) /usr/local/bin/
