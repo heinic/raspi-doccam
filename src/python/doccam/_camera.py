@@ -38,7 +38,7 @@ def setBounds(res, crop):
     # Chooses the correct resolution for the cropped area
     newres = (int(res[0] * crop[2]),
             int(res[1] * crop[3]))
-    if(cam.rotation in (90, 180)):
+    if(cam.rotation in (90, 270)):
         newres = (newres[1], newres[0])
 
     if(cam.resolution != newres):
@@ -120,15 +120,16 @@ def zoom(sizediff):
     global globalCrop
 
     newCrop = [globalCrop[i] for i in range(4)]
-    newCrop[2] += diff; newCrop[3] += diff
+    newCrop[2] += sizediff; newCrop[3] += sizediff
 
     newCrop[2] = clamp(0.1, 1, newCrop[2])
     newCrop[3] = clamp(0.1, 1, newCrop[3])
 
-    newCrop[0] += (startCrop[2] - newCrop[2]) / 2.0
-    newCrop[1] += (startCrop[3] - newCrop[3]) / 2.0
+    newCrop[0] += (globalCrop[2] - newCrop[2]) / 2.0
+    newCrop[1] += (globalCrop[3] - newCrop[3]) / 2.0
 
     newCrop[0] = clamp(0, 1 - newCrop[2], newCrop[0])
     newCrop[1] = clamp(0, 1 - newCrop[3], newCrop[1])
 
-    cam.crop = newCrop
+    globalCrop = newCrop
+    cam.crop = globalCrop
