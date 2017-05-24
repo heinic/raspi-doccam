@@ -24,7 +24,7 @@ from RPi import GPIO
 import sys, time
 import subprocess
 
-from doccam.comm import sendCmd
+from doccam.comm import sendRequest
 
 global screens
 screens = []
@@ -163,7 +163,7 @@ class SettingsMenu(SimpleScreen):
 
     def onChangePrev(self, num):
         if (num < 2):
-            sendCmd(("cam", "preview", str(num)))
+            sendRequest("cam preview " + str(num))
 
 class NetworkSettingsMenu(SimpleScreen):
     def __init__(self):
@@ -173,8 +173,8 @@ class NetworkSettingsMenu(SimpleScreen):
         self.update()
 
     def update(self):
-        self.info = ("WiFi - SSID: " + sendCmd(("wifi", "ssid", "")) +
-                "\nPassword: " + sendCmd(("wifi", "pass", "")) + "\n")
+        self.info = ("WiFi - SSID: " + sendRequest("wifi ssid") +
+                "\nPassword: " + sendRequest("wifi pass") + "\n")
 
     def changeWIFIPass(self):
         dialog = DialogScreen("Change WiFi password",
@@ -186,7 +186,7 @@ class NetworkSettingsMenu(SimpleScreen):
     def onChangeWifiPass(self, num):
         if(num == 0):
             print("Changing WiFi Password")
-            sendCmd(("wifi", "newpass", ""))
+            sendRequest("wifi newpass")
             self.update()
 
 class ImageSettingsMenu(SimpleScreen):
@@ -204,7 +204,7 @@ class ImageSettingsMenu(SimpleScreen):
     def onChangeFlip(self, num):
         if(num < 3):
             flips = "n", "h", "v"
-            sendCmd(("cam", "flip", flips[num]))
+            sendRequest("cam flip " + flips[num])
 
     def changeRot(self):
         dialog = DialogScreen("Rotate image", ("No rotation", "90°\nclockwise",
@@ -212,12 +212,12 @@ class ImageSettingsMenu(SimpleScreen):
         showScreen(dialog)
 
     def onChangeRot(self, num):
-        sendCmd(("cam", "rot", str(num * 90)))
+        sendRequest("cam rot " + str(num * 90))
 
     def openZoom(self):
         zoomMenu = SimpleScreen("Zoom", ("Zoom In", "Zoom Out", "", "Back"),
-                (lambda: sendCmd(("cam", "zoom", "+")),
-                lambda: sendCmd(("cam", "zoom", "-")), 0, popScreen))
+                (lambda: sendRequest("cam zoom +"),
+                lambda: sendRequest("cam zoom -"), 0, popScreen))
         showScreen(zoomMenu)
 
 class DevSettingsMenu(SimpleScreen):

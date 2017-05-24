@@ -55,7 +55,7 @@ files-py = src/python/doccam-core src/python/doccam-gui src/python/doccam-gui-wa
 files-py-mod = src/python/doccam/__init__.py src/python/doccam/cgihelper.py \
   src/python/doccam/comm.py src/python/doccam/_camera.py \
 	src/python/doccam/logger.py
-files-cgi = src/cgi/config.py src/cgi/picture.py
+files-cgi = src/cgi/request.py src/cgi/picture.py
 files-html = src/html/about.html src/html/control.html src/html/index.html \
   src/html/load-placeholder.png src/html/scripts.js src/html/style.css
 

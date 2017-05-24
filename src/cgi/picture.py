@@ -26,13 +26,12 @@ from doccam.cgihelper import readGetQuery
 query = readGetQuery()
 
 # Transfer settings for IPC
-extra = ""
-if ('type' in query and query['type'] == 'thumb'): extra = 'thumb'
-if ('type' in query and query['type'] == 'hires'): extra = 'hires'
-if ('crop' in query and query['crop']): extra += ';' + query['crop']
+extra = {}
+if ('res' in query): extra["res"] = query["res"]
+if ('crop' in query): extra["crop"] = query['crop'].split(",")
 
 # response
 print('Content-type: image/png\n')
 
 # capture and send picture
-capturePic(sys.stdout, extra=extra)
+capturePic(sys.stdout, **extra)

@@ -20,11 +20,10 @@
 
 import os, sys, io, time
 import threading, subprocess
-import socket, json
+import socket, json, string
 import doccam._camera as camera
 
 import doccam.logger as logger
-
 
 def ipcListen():
     """Waits for requests via IPC and handles them in seperate threads."""
@@ -46,125 +45,143 @@ def ipcHandle(conn):
 
     listen = True
     try:
-        while listen:
-            strdat = conn.recv(4094)
-            if not strdat: break
-            data = json.loads(strdat) # load json to an array
-            logger.log("{threadname} handling request \"{request}\""
-                    .format(threadname=threading.currentThread().getName(), request=data))
+        strdat = conn.recv(4094)
+        if not strdat: return
+        cmd = strdat.split(" ")
+        logger.log("{threadname} handling request \"{request}\""
+                .format(threadname=threading.currentThread().getName(), request=cmd))
+        if cmd[0] == "conf":
+            if cmd[1] == "load": # Load config
+                loadConfig()
+                conn.send("success")
+            if cmd[1] == "save": # Save config
+                saveConfig()
+                conn.send("success")
 
-            if data[0] == "conf":
-                if data[1] == "load": # Load config
-                    loadConfig()
-                    conn.send("success")
-                if data[1] == "save": # Save config
-                    saveConfig()
-                    conn.send("success")
+        if cmd[0] == "cam": # Camera related actions
+            if cmd[1] == "cappic": # Capture image and send it via the IPC socket
+                args = cmd[2:]
+                res = camera.DEFAULT_RESOLUTION
+                crop = (0, 0, 1, 1)
 
-            if data[0] == "cam": # Camera related actions
-                if data[1] == "cappic_stream": # Capture image and send it via the IPC socket
-                    data[2] = data[2].split(';')
-
-                    res = camera.DEFAULT_RESOLUTION
-                    # Change the resolution if requested
-                    if(data[2][0] and data[2][0] == 'thumb'):
-                        res = camera.THUMB_RESOLUTION
-                    if(data[2][0] and data[2][0] == 'hires'):
-                        res = camera.MAX_RESOLUTION
-
-                    try:
-                        if(len(data[2]) != 5): # No crop requested
-                            camera.capture(conn.makefile("wb"), res=res)
-
-                        else: # Crop requested
-                            crop = (float(data[2][1]), float(data[2][2]),
-                                    float(data[2][3]), float(data[2][4]))
-                            camera.captureArea(conn.makefile("wb"), res=res, crop=crop)
-
-                    except Exception as e:
-                        raise
-
-                    listen = False
-                if data[1] == "flip":
-                    if data[2] == "": # Respond with the current flip
-                        if(camera.cam.hflip): conn.send("h")
-                        elif(camera.cam.vflip): conn.send("v")
-                        else: conn.send("n")
-                    else: # Change flip
-                        flip = data[2]
-                        if(flip == "n" or flip == "h" or flip == "v"):
-                            camera.cam.hflip = flip == "h"
-                            camera.cam.vflip = flip == "v"
-
-                            conn.send("success")
-                if data[1] == "rot":
-                    if data[2] == "": # Respond with current rotation
-                        conn.send(str(camera.cam.rotation))
-                    else: # Change rotation
-                        try:
-                            if(int(data[2]) in (0, 90, 180, 270)):
-                                camera.cam.rotation = int(data[2])
-                                camera.setBounds(camera.DEFAULT_RESOLUTION, camera.globalCrop)
-                                conn.send("success")
-                        except ValueError as e: pass # EAFP
-
-                if data[1] == "preview":
-                    if data[2] == "": # Send back the preview status
-                        conn.send("1" if camera.cam.preview else "0")
-                    else: # Change preview status
-                        if(data[2] in ("0", "1")):
-                            if data[2] == "1":
-                                camera.cam.start_preview()
-                            else:
-                                camera.cam.stop_preview()
-                            conn.send("success")
-
-                if data[1] == "crop":
-                    if data[2] == "": # Respond with current crop
-                        conn.send(json.dumps(camera.globalCrop))
-                    else: # Set global crop
-                        newCrop = json.loads(data[2])
-                        if(len(newCrop) == 4):
-                            newCrop = [float(i) for i in newCrop]
-                            camera.globalCrop = newCrop
-                            camera.setBounds(camera.DEFAULT_RESOLUTION, newCrop)
-                            conn.send("success")
-
-                if data[1] == "zoom":
-                    diff = 0
-                    if(data[2] == "+"): diff = -0.1
-                    elif(data[2] == "-"): diff =  0.1
+                for arg in args:
+                    if(arg.startswith("res=")):
+                        resstr = arg[4:]
+                        if(resstr == "thumb"):
+                            res = camera.THUMB_RESOLUTION
+                        elif(resstr == "hires"):
+                            res = camera.MAX_RESOLUTION
+                        else:
+                            res = [int(val) for val in resstr.split(",")]
+                            if(len(res) != 2):
+                                conn.send("Invalid resolution: {res}".format(res=resstr))
+                                return
+                    elif(arg.startswith("crop=")):
+                        cropstr = arg[5:]
+                        crop = [float(val) for val in cropstr.split(",")]
+                        if(len(crop) != 4):
+                            conn.send("Invalid crop: {crop}".format(crop=cropstr))
+                            return
                     else:
-                        conn.send("Invalid argument")
-                        break
+                        conn.send("Unrecognized argument: {arg}".format(arg=arg))
+                        return
 
-                    camera.zoom(diff)
+                try:
+                    if(crop == (0, 0, 1, 1)): # No crop requested
+                        camera.capture(conn.makefile("wb"), res=res)
+                    else: # Crop requested
+                        camera.captureArea(conn.makefile("wb"), res=res, crop=crop)
                     conn.send("success")
+                except Exception as e:
+                    conn.send("internal error")
+                    raise
 
-            if data[0] == "wifi": # WiFi settings
-                if data[1] == "newpass":
-                    # Generate a new password using /dev/urandom
-                    chars = string.ascii_letters + string.digits
-                    chars += "+-/*_<>=?!&()[]}{/\\"
-                    passwd = ""
-                    for i in range(10):
-                        charid = os.urandom(1)
-                        char = chars[ord(charid) % len(chars)]
-                        passwd += char
-
-                    wifiPass = passwd
-                    wifiChanged = True
-                    logger.log("New Password: \"{passwd}\"".format(passwd=passwd))
-                    conn.send(wifiPass)
-                if data[1] == "pass": # Respond with the current password
-                    conn.send(wifiPass)
-                if data[1] == "ssid":
-                    if data[2] == "": # Respond with the current SSID
-                        conn.send(wifiSsid)
-                    else: # Change the SSID
-                        wifiSsid = data[2]
-                        wifiChanged = True
+            if cmd[1] == "flip":
+                if len(cmd) == 2: # Respond with the current flip
+                    if(camera.cam.hflip): conn.send("h")
+                    elif(camera.cam.vflip): conn.send("v")
+                    else: conn.send("n")
+                else: # Change flip
+                    flip = cmd[2]
+                    if(flip == "n" or flip == "h" or flip == "v"):
+                        camera.cam.hflip = flip == "h"
+                        camera.cam.vflip = flip == "v"
                         conn.send("success")
+                    else:
+                        conn.send("Invalid flip")
+
+            if cmd[1] == "rot":
+                if len(cmd) == 2: # Respond with the current rotation
+                    conn.send(str(camera.cam.rotation))
+                else: # Change rotation
+                    try:
+                        if(int(cmd[2]) in (0, 90, 180, 270)):
+                            camera.cam.rotation = int(cmd[2])
+                            camera.setBounds(camera.DEFAULT_RESOLUTION, camera.globalCrop)
+                            conn.send("success")
+                    except ValueError as e: conn.send("invalid value") # EAFP
+
+            if cmd[1] == "preview":
+                if len(cmd) == 2: # Send back the preview status
+                    conn.send("1" if camera.cam.preview else "0")
+                elif cmd[2] == "1":
+                    camera.cam.start_preview()
+                    conn.send("success")
+                elif cmd[2] == "0":
+                    camera.cam.stop_preview()
+                    conn.send("success")
+                else:
+                    conn.send("invalid value")
+
+            if cmd[1] == "crop":
+                if len(cmd) == 2: # Respond with current crop
+                    conn.send(str.join(",", camera.globalCrop))
+                else: # Set global crop
+                    newCrop = cmd[2].split(",")
+                    if(len(newCrop) == 4):
+                        newCrop = [float(i) for i in newCrop]
+                        camera.globalCrop = newCrop
+                        camera.setBounds(camera.DEFAULT_RESOLUTION, newCrop)
+                        conn.send("success")
+                    else:
+                        conn.send("invalid value")
+
+            if cmd[1] == "zoom":
+                diff = 0
+                if(cmd[2] == "reset"): diff = 1
+                elif(cmd[2] == "+"): diff = -0.1
+                elif(cmd[2] == "-"): diff =  0.1
+                else:
+                    conn.send("invalid argument")
+                    return
+
+                camera.zoom(diff)
+                conn.send("success")
+
+        if cmd[0] == "wifi": # WiFi settings
+            if cmd[1] == "newpass":
+                # Generate a new password using /dev/urandom
+                chars = string.ascii_letters + string.digits
+                chars += "+-/*_<>=?!&()[]}{/\\"
+                passwd = ""
+                for i in range(10):
+                    charid = os.urandom(1)
+                    char = chars[ord(charid) % len(chars)]
+                    passwd += char
+
+                wifiPass = passwd
+                wifiChanged = True
+                logger.log("New Password: \"{passwd}\"".format(passwd=passwd))
+                conn.send(wifiPass)
+            if cmd[1] == "pass": # Respond with the current password
+                conn.send(wifiPass)
+            if cmd[1] == "ssid":
+                if len(cmd) == 2: # Respond with the current SSID
+                    conn.send(wifiSsid)
+                else: # Change the SSID
+                    wifiSsid = cmd[2]
+                    wifiChanged = True
+                    conn.send("success")
     except Exception as e:
         raise
 

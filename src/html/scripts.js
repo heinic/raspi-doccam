@@ -14,13 +14,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-// load and change settings via /cgi-bin/config.py
-function setval(setting, value, callback) {
+// load and change settings via /cgi-bin/request.py
+function request(request, callback) {
   var req = new XMLHttpRequest();
   req.onreadystatechange = function() {
     if(req.readyState == 4 && req.status == 200 && callback != null)
       callback(req.responseText);};
-  req.open("GET", "/cgi-bin/config.py?setting=" + setting + "&value=" +  value);
+  req.open("GET", "/cgi-bin/request.py?request=" + request);
   req.send(null);
 }
 
@@ -34,7 +34,7 @@ function loadBase() {
       this.classList.remove("hidden");
       this.parentNode.classList.remove("reservespace")
     };
-    prevImg.src = "/cgi-bin/picture.py?type=thumb";
+    prevImg.src = "/cgi-bin/picture.py?res=thumb";
   }
 
   bigPrevs = document.getElementsByClassName("bigpreview");

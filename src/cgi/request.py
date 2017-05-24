@@ -19,21 +19,18 @@
 #
 
 import os, sys
-from doccam.comm import sendCmd
+from doccam.comm import sendRequest
 from doccam.cgihelper import readGetQuery
 
 # POST input
 query = readGetQuery()
 
-if not query['setting']: sys.exit()
-sparts = query['setting'].split('_')
-if not len(sparts) == 2: sys.exit()
-
-if not 'value' in query: query['value'] = ''
+if not query["request"]: sys.exit()
+request = query["request"].replace("%20", " ")
 
 # IPC
-response = sendCmd((sparts[0], sparts[1], query['value']))
+response = sendRequest(request)
 
 # Response
-print('Content-type: text/plain\n')
+print("Content-type: text/plain\n")
 sys.stdout.write(response)

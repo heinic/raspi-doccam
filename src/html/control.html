@@ -51,15 +51,15 @@
     // Request the config from the server
     function loadConf()
     {
-      setval("cam_preview", "", (function(res)
+      request("cam preview", (function(res)
           { document.getElementById("indoprev").value = res; }) );
-      setval("cam_flip", "", (function(res)
+      request("cam flip", (function(res)
           { document.getElementById("inflip").value = res; }) );
-      setval("cam_rot", "", (function(res)
+      request("cam rot", (function(res)
           { document.getElementById("inrot").value = res; }) );
-      setval("wifi_ssid", "", (function(res)
+      request("wifi ssid", (function(res)
           { document.getElementById("inSSID").value = res; }) );
-      setval("wifi_pass", "", (function(res)
+      request("wifi pass", (function(res)
           { document.getElementById("outPass").value = res; }) );
     }
 
@@ -139,8 +139,8 @@
       console.log("selected");
       if(crop.width == 0 || crop.height == 0) return;
       document.getElementsByClassName("croppreview")[0].src =
-          ("/cgi-bin/picture.py?crop=" + crop.x + ";" + crop.y + ";" +
-          crop.width + ";" + crop.height);
+          ("/cgi-bin/picture.py?crop=" + crop.x + "," + crop.y + "," +
+          crop.width + "," + crop.height);
     }
 
     function selectRemove() { crop.div.classList.add("hidden"); }
@@ -195,14 +195,14 @@
 
           <div class="row">
             <select id="indoprev" class="col-s-6"
-                onchange="setval('cam_preview', this.value, null);">
+                onchange="request('cam preview ' + this.value, null);">
               <option value="0">No preview</option>
               <option value="1">Enable preview</option>
             </select>
           </div>
 
           <select id="inrot" class="col-s-6"
-              onchange="setval('cam_rot', this.value, null);">
+              onchange="request('cam rot ' + this.value, null);">
             <option value="0">No Rotation</option>
             <option value="90">90&deg; clockwise rotation</option>
             <option value="180">Rotate 180&deg;</option>
@@ -210,7 +210,7 @@
           </select>
 
           <select id="inflip" class="col-s-6"
-              onchange="setval('cam_flip', this.value, null);">
+              onchange="request('cam flip ' + this.value, null);">
             <option value="n">No mirroring</option>
             <option value="h">Mirror horizontally</option>
             <option value="v">Mirror vertically</option>
@@ -225,7 +225,7 @@
           <input type="text" id="outPass" class="col-s-3" readonly="true"></input>
 
           <input type="button" id="inNewPass" class="col-s-3" value="Change"
-            onclick="setval('wifi_newpass', '', (function(res) {document.getElementById('outPass').value = res;})); return false;"/>
+            onclick="request('wifi newpass', (function(res) {document.getElementById('outPass').value = res;})); return false;"/>
         </div>
       </div>
     </div>

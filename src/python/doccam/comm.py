@@ -21,26 +21,29 @@
 import json
 import socket
 
-def sendCmd(data):
+def sendRequest(request):
     """Sends a command to doccam-core and returns the result."""
-    strdat = json.dumps(data)
 
     sock = socket.socket()
     sock.connect(("127.3.1.4", 3141))
 
-    sock.send(strdat)
-    retdat = sock.recv(4096)
+    sock.send(request)
+    response = sock.recv(4096)
 
     sock.close()
-    print("IPC: " + strdat + "; answer: " + retdat)
-    return retdat
+    print("IPC: " + request + "; answer: " + response)
+    return response
 
-def capturePic(fileob, extra=""):
+def capturePic(fileob, res=None, crop=None):
     """Capture a picture with doccam-core and save the content to a file object"""
-    strdat = json.dumps(("cam", "cappic_stream", extra))
+    request = "cam cappic"
+    if(res != None): request += " res={res}".format(res=res)
+    if(crop != None): request += " crop={crop}".format(
+            crop=str.join(",", crop))
+
     sock = socket.socket()
     sock.connect(('127.3.1.4', 3141))
-    sock.send(strdat)
+    sock.send(request)
 
     try:
         while True:
